@@ -2,7 +2,8 @@ clc;
 clear; close all;
 %% Load Feature Matrix
 featurePath = 'C:\Users\brth229\OneDrive - University of Kentucky\Research Projects\ErRP\results\features';
-combined_data = load(fullfile(featurePath,'combinedFeatures.mat')).combined_epochs;
+combined_data = load(fullfile(featurePath,'combinedFeatures.mat')).combined_data;
+disp('Features are extracted succeffully.')
 resultsPath = 'C:\Users\brth229\OneDrive - University of Kentucky\Research Projects\ErRP\results';
 %% Columns for Features and Sessions
 subColIndex = 1;
@@ -10,8 +11,8 @@ sessColIndex = 2;
 classColIndex = 3;
 BPFColIndex = 5;
 %% Session Determination
-subjectNumber = unique(cell2mat(combined_data(:,subColIndex)));
-sessions = unique(cell2mat(combined_data(:,sessColIndex)));
+subjectNumber = unique(cell2mat(combined_data(2:end,subColIndex)));
+sessions = unique(cell2mat(combined_data(2:end,sessColIndex)));
 % Use ndgrid to create all combinations
 [X, Y] = ndgrid(subjectNumber, sessions);
 combinations = [X(:), Y(:)];
@@ -24,7 +25,7 @@ resultCellCounter = 1;
 for sessCombi = 1:length(combinations)
     currentSubject = combinations(sessCombi,1);
     currentSession = combinations(sessCombi,2);
-    currentCombIndices = find(cell2mat(combined_data(:,subColIndex))==currentSubject & cell2mat(combined_data(:,sessColIndex))==currentSession);
+    currentCombIndices = find(cell2mat(combined_data(2:end,subColIndex))==currentSubject & cell2mat(combined_data(2:end,sessColIndex))==currentSession)+1;
     disp(['<strong>Subject: ' num2str(currentSubject) ' Session: ' num2str(currentSession) ' .</strong>'])
     %% Class or Output Matrix
     currentY = cell2mat(combined_data(currentCombIndices,classColIndex));
@@ -60,10 +61,13 @@ for sessCombi = 1:length(combinations)
             test_labels = currentY(testIndices);  % Testing labels
 
             %% Handling Imabalance in the Class Distribution
-            [balancedTrainingInput,balancedTrainingLabels] = Utility_Functions.randomOversample(train_input,train_labels);
-            disp('Distribution of class 1 and class 0:')
+            [trainingInput_Min,trainingLabel_Min] = ADASYN(train_input,train_labels);
+            %             [balancedTrainingInput,balancedTrainingLabels] = Utility_Functions.randomOversample(train_input,train_labels);
+            balancedTrainingInput = [train_input;trainingInput_Min];
+            balancedTrainingLabels = [train_labels;trainingLabel_Min];
+            disp('Distribution of class 1/class 0:')
             disp([' Before oversampling: ' num2str(sum(train_labels==1)) '/' num2str(sum(train_labels==0))])
-            disp([' Before oversampling: ' num2str(sum(balancedTrainingLabels==1)) '/' num2str(sum(balancedTrainingLabels==0))])
+            disp([' After oversampling: ' num2str(sum(balancedTrainingLabels==1)) '/' num2str(sum(balancedTrainingLabels==0))])
             %% Implementation of SVM
             optOPtionsLSVM = struct('AcquisitionFunctionName','expected-improvement-plus',...
                 'ShowPlots',0,...
@@ -119,14 +123,30 @@ for sessCombi = 1:length(combinations)
         foldTestMetricsLDA(6,:) = mean(foldTestMetricsLDA(1:numFolds,:),1);
         foldTestMetricsLDA(7,:) = std(foldTestMetricsLDA(1:numFolds,:),0,1);
         %% result cell
-        resultCell(resultCellCounter,1:3) = {currentSubject,currentSession,'ErrP'};
+        resultCell(resultCellCounter,1:3) = {currentSubject,currentSession,featureNames{featurei}};
         resultCell(resultCellCounter,4:6) = {foldTrainMetricsLSVM,foldTestMetricsLSVM,foldBestC};
         resultCell(resultCellCounter,7:9) = {foldTrainMetricsLDA,foldTestMetricsLDA,foldBestGamma};
     end
+    clc;
 end
 
 %% Taking Averages for All 12 Sessions
-
+lastRowIndex = length(resultCell);
+for featurei = 1:length(featureNames)
+    featureCombIndices = 1+featurei:length(featureNames):lastRowIndex;
+    combinationInfo = resultCell(featureCombIndices,3);
+    same = all(cellfun(@isequal, combinationInfo, repmat(combinationInfo(1,:), size(combinationInfo,1), 1)), 2);
+    if ~any(same)
+        error('Not the same combinations')
+    end
+    resultCell(lastRowIndex+featurei,2:3) = {'Average',resultCell(1+featurei,3)};
+    AllSessionsLSVM= cell2mat(cellfun(@(A) A(6,:), resultCell(featureCombIndices,5),'UniformOutput',false));
+    resultCell(lastRowIndex+featurei,5) = {[mean(AllSessionsLSVM,1);std(AllSessionsLSVM,0,1)]};
+    AllSessionsLDA= cell2mat(cellfun(@(A) A(6,:), resultCell(featureCombIndices,8),'UniformOutput',false));
+    resultCell(lastRowIndex+featurei,8) = {[mean(AllSessionsLDA,1);std(AllSessionsLDA,0,1)]};
+end
+%% Add comments in the resultCell
+resultCell(end+1,2) = {'With CAR as the first step of preprocessing.'};
 %% Save Result Cell
 overallResultPath = fullfile(resultsPath,'overall');
 [~,~,~]=mkdir(overallResultPath);
@@ -134,5 +154,5 @@ dateAndTime = datetime('now');
 currentDate = char(datetime("today"));
 resultCellFileName = ['resultCell_' char(datetime("today")) '_' num2str(hour(dateAndTime)) num2str(minute(dateAndTime)) '.mat'];
 save(fullfile(overallResultPath,resultCellFileName),"resultCell")
-disp('Results are saved.')
+disp('<strong>Results are saved.</strong>')
 %% END OF SCRIPT

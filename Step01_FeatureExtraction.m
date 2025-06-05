@@ -21,14 +21,14 @@ selected_channels = {'C1', 'C2', 'Cz', 'CP1', 'CP2', 'CPz', 'FC1', 'FC2', 'FCz'}
 %% Epoch Extraction
 % Create cell array to combine all relevant data. Useful for doing both subject wise or session wise classification
 % Column 1: Subject; Column 2: Session; Column 3: Class Label; Column 4: Preprocessed EEG Data; Column 5: BPF EEG Data;  
-combined_epochs = cell(1,11);
+combined_data = cell(1,11);
 subColIndex = 1;
 sessColIndex = 2;
 classColIndex = 3;
 HPFColIndex = 4;
 BPFColIndex = 5;
 ErrPColIndex = 6;ShEnColIndex = 7;DWTColIndex=8;PSDColIndex=9;SpectEnColIndex=10;ARColIndex=11;
-combined_epochs(1,:) = {'Subject','Session','Class','HPF EEG','BPF EEG','ErrP','ShEn','DWT','PSD','SpectEn','AR'};
+combined_data(1,:) = {'Subject','Session','Class','HPF EEG','BPF EEG','ErrP','ShEn','DWT','PSD','SpectEn','AR'};
 %% Files Loop
 sample_counter = 1;
 for filei=1:length(data_filenames) 
@@ -54,11 +54,11 @@ for filei=1:length(data_filenames)
             start_sample = current_error_event_pos(eventi)+window_start*current_run_fs;
             end_sample = start_sample+(window_size*current_run_fs)-1;
             sample_counter=sample_counter+1;
-            combined_epochs{sample_counter,subColIndex} = current_data{1,runi}.header.Subject;
-            combined_epochs{sample_counter,sessColIndex} = current_data{1,runi}.header.Session;
-            combined_epochs{sample_counter,classColIndex} = 1;
-            combined_epochs{sample_counter,HPFColIndex} = current_run_HPF_eeg(start_sample:end_sample,selected_channel_indexes)';
-            combined_epochs{sample_counter,BPFColIndex} = current_run_BPF_eeg(start_sample:end_sample,selected_channel_indexes)';
+            combined_data{sample_counter,subColIndex} = current_data{1,runi}.header.Subject;
+            combined_data{sample_counter,sessColIndex} = current_data{1,runi}.header.Session;
+            combined_data{sample_counter,classColIndex} = 1;
+            combined_data{sample_counter,HPFColIndex} = current_run_HPF_eeg(start_sample:end_sample,selected_channel_indexes)';
+            combined_data{sample_counter,BPFColIndex} = current_run_BPF_eeg(start_sample:end_sample,selected_channel_indexes)';
 
         end
 
@@ -70,11 +70,11 @@ for filei=1:length(data_filenames)
             start_sample = current_correct_event_pos(eventi)+window_start*current_run_fs;
             end_sample = start_sample+(window_size*current_run_fs)-1;
             sample_counter=sample_counter+1;
-            combined_epochs{sample_counter,subColIndex} = current_data{1,runi}.header.Subject;
-            combined_epochs{sample_counter,sessColIndex} = current_data{1,runi}.header.Session;
-            combined_epochs{sample_counter,classColIndex} = 0;
-            combined_epochs{sample_counter,HPFColIndex} = current_run_HPF_eeg(start_sample:end_sample,selected_channel_indexes)';
-            combined_epochs{sample_counter,BPFColIndex} = current_run_BPF_eeg(start_sample:end_sample,selected_channel_indexes)';
+            combined_data{sample_counter,subColIndex} = current_data{1,runi}.header.Subject;
+            combined_data{sample_counter,sessColIndex} = current_data{1,runi}.header.Session;
+            combined_data{sample_counter,classColIndex} = 0;
+            combined_data{sample_counter,HPFColIndex} = current_run_HPF_eeg(start_sample:end_sample,selected_channel_indexes)';
+            combined_data{sample_counter,BPFColIndex} = current_run_BPF_eeg(start_sample:end_sample,selected_channel_indexes)';
         end
         disp([' Total Correct Correct/Error Events: ' num2str(length(current_correct_event_pos)) '/' num2str(length(current_error_event_pos))])
     end
@@ -82,16 +82,16 @@ end
 %% Plotting ErrP/Correct
 ErrPFolder = fullfile(resultsPath,'ErrP');
 [~,~,~] = mkdir(ErrPFolder);
-subjectNums = unique(cell2mat(combined_epochs(2:end,subColIndex)));
+subjectNums = unique(cell2mat(combined_data(2:end,subColIndex)));
 for subi = 1:length(subjectNums)
     currentSubject = subjectNums(subi);
     for sessi=1:2
-        currentSessionCorrectIndices = find(cell2mat(combined_epochs(2:end,subColIndex))==currentSubject & cell2mat(combined_epochs(2:end,sessColIndex))==sessi & cell2mat(combined_epochs(2:end,classColIndex))==0);
-        currentSessionErrPIndices = find(cell2mat(combined_epochs(2:end,subColIndex))==currentSubject & cell2mat(combined_epochs(2:end,sessColIndex))==sessi & cell2mat(combined_epochs(2:end,classColIndex))==1);
-        correctSamplesHPF = permute(cat(3,combined_epochs{currentSessionCorrectIndices,HPFColIndex}),[3,1,2]);
-        ErrPSamplesHPF = permute(cat(3,combined_epochs{currentSessionErrPIndices,HPFColIndex}),[3,1,2]);
-        correctSamplesBPF = permute(cat(3,combined_epochs{currentSessionCorrectIndices,BPFColIndex}),[3,1,2]);
-        ErrPSamplesBPF = permute(cat(3,combined_epochs{currentSessionErrPIndices,BPFColIndex}),[3,1,2]);
+        currentSessionCorrectIndices = find(cell2mat(combined_data(2:end,subColIndex))==currentSubject & cell2mat(combined_data(2:end,sessColIndex))==sessi & cell2mat(combined_data(2:end,classColIndex))==0)+1;
+        currentSessionErrPIndices = find(cell2mat(combined_data(2:end,subColIndex))==currentSubject & cell2mat(combined_data(2:end,sessColIndex))==sessi & cell2mat(combined_data(2:end,classColIndex))==1)+1;
+        correctSamplesHPF = permute(cat(3,combined_data{currentSessionCorrectIndices,HPFColIndex}),[3,1,2]);
+        ErrPSamplesHPF = permute(cat(3,combined_data{currentSessionErrPIndices,HPFColIndex}),[3,1,2]);
+        correctSamplesBPF = permute(cat(3,combined_data{currentSessionCorrectIndices,BPFColIndex}),[3,1,2]);
+        ErrPSamplesBPF = permute(cat(3,combined_data{currentSessionErrPIndices,BPFColIndex}),[3,1,2]);
         for chi=1:length(selected_channels)
             % HPF Filtered
             correctSamplesPerChannel = squeeze(correctSamplesHPF(:,chi,:));
@@ -113,7 +113,7 @@ for subi = 1:length(subjectNums)
             xlabel('Time relative to the event onset [s]');
             ylabel('Amplitude [\muV]');ylim([-20,20]);
             title(['Channel Name:' selected_channels{chi}])
-            fileName = ['Fig_ErrPCorrect_HPF_Sub' num2str(subi) '_Session' num2str(sessi) '_' selected_channels{chi}];
+            fileName = ['Fig_ErrPCorrect_CAR_BSF_Sub' num2str(subi) '_Session' num2str(sessi) '_' selected_channels{chi}];
             saveas(gcf, fullfile(ErrPFolder, [fileName '.fig']));
             print(gcf, fullfile(ErrPFolder, [fileName '.tif']), '-dtiff', '-r300');
 
@@ -137,32 +137,37 @@ for subi = 1:length(subjectNums)
             xlabel('Time relative to the event onset [s]');
             ylabel('Amplitude [\muV]');ylim([-20,20]);
             title(['Channel Name:' selected_channels{chi}])
-            fileName = ['Fig_ErrPCorrect_BPF_Sub' num2str(subi) '_Session' num2str(sessi) '_' selected_channels{chi}];
+            fileName = ['Fig_ErrPCorrect_CAR_BPF_Sub' num2str(subi) '_Session' num2str(sessi) '_' selected_channels{chi}];
             saveas(gcf, fullfile(ErrPFolder, [fileName '.fig']));
             print(gcf, fullfile(ErrPFolder, [fileName '.tif']), '-dtiff', '-r300');
         end
         disp(['Figure is saved for Subject ' num2str(subi) ' Session ' num2str(sessi) '.'])
     end
 end
+
+%% Load existing combinedFeatures . mat
+featurePath = fullfile(resultsPath,'features');
+if 0
+    combined_data = load(fullfile(featurePath,'combinedFeatures.mat')).combined_epochs;
+end
 %% Extracting Features for Each Sample
-for triali = 2:size(combined_epochs,1)
-    currentTrialEEGHPF = combined_epochs{triali,HPFColIndex};
-    currentTrialEEGBPF = combined_epochs{triali,BPFColIndex};
+for triali = 2:size(combined_data,1)
+    currentTrialEEGHPF = combined_data{triali,HPFColIndex};
+    currentTrialEEGBPF = combined_data{triali,BPFColIndex};
     currentERPFeature = reshape(currentTrialEEGBPF',1,[]);
     current_entropy_feature=Utility_Functions.calculate_Entropy(currentTrialEEGHPF,fs);
-    current_dwt_feature=Utility_Functions.calculate_WPD(currentTrialEEGHPF);
+    current_dwt_feature=Utility_Functions.calculate_DWT(currentTrialEEGHPF);
     current_PSD_feature=Utility_Functions.calculate_PSD(currentTrialEEGHPF,fs);
-    
+    current_SpectEn_feature=Utility_Functions.func_compute_SpectEn(currentTrialEEGHPF,fs);
     current_AAR_feature=Utility_Functions.calculate_AAR(currentTrialEEGHPF);
     % Assign all features in one line
-    [combined_epochs{triali,BPFColIndex+1:BPFColIndex+6}] = deal(currentERPFeature, current_dwt_feature, current_wpd_feature,current_PSD_feature,current_entropy_feature, current_AAR_feature);
-    disp(['Trial ' num2str(triali) '/' num2str(size(combined_epochs,1)) ' is completed.'])
+    [combined_data{triali,BPFColIndex+1:BPFColIndex+6}] = deal(currentERPFeature, current_entropy_feature, current_dwt_feature,current_PSD_feature,current_SpectEn_feature, current_AAR_feature);
+    disp(['Trial ' num2str(triali-1) '/' num2str(size(combined_data,1)-1) ' is completed.'])
 end
 
 %% Saving the Combined File with features
 fileName = 'combinedFeatures.mat';
-featurePath = fullfile(resultsPath,'features');
 [~,~,~]=mkdir(featurePath);
-save(fullfile(featurePath,fileName),"combined_epochs");
+save(fullfile(featurePath,fileName),"combined_data");
 disp('<strong>Features are saved.</strong>')
 %% END OF SCRIPT

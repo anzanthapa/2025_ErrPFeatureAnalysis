@@ -4,38 +4,47 @@ classdef Utility_Functions
     methods(Static)
 
 
-        function [HPF_signal,BPF_signal] = preprocess_eeg(raw_eeg,fs)
+        function [BSF100_signal,BPF_signal] = preprocess_eeg(raw_eeg,fs)
             HPF_signal = zeros(size(raw_eeg));
+            BSF50_signal = zeros(size(raw_eeg));
+            BSF100_signal = zeros(size(raw_eeg));
             BPF_signal = zeros(size(raw_eeg));
+            CAREEG = raw_eeg - mean(raw_eeg,2);
             for chi = 1:size(raw_eeg,2)
-                [HPF_signal(:,chi),~] = highpass(raw_eeg(:,chi)',0.1,fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
-                [BPF_signal(:,chi),~] = bandpass(raw_eeg(:,chi)',[1,10],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
+                [HPF_signal(:,chi),~] = highpass(CAREEG(:,chi)',0.1,fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
+                [BSF50_signal(:,chi),~] = bandstop(HPF_signal(:,chi)',[49.9,50.1],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
+                [BSF100_signal(:,chi),~] = bandstop(HPF_signal(:,chi)',[99.9,100.1],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
+                [BPF_signal(:,chi),~] = bandpass(CAREEG(:,chi)',[1,10],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
             end
         end
 
 
-        function [dwt_feature]=calculate_WPD(inputEEG)
+        function [dwt_feature]=calculate_DWT(inputEEG)
             waveletname='db4';
             decomplevel=3;
             dwt_feature_array=[];
             for chi=1:size(inputEEG,1)
                 wpd_trees=wpdec(inputEEG(chi,:),decomplevel,waveletname);
-                dwt_feature_array1=wpcoef(wpd_trees,[3,0]);
-                dwt_feature_array2=wpcoef(wpd_trees,[3,1]);
-                dwt_feature_array=[dwt_feature_array;dwt_feature_array1,dwt_feature_array2];
+                dwt_feature_array1=wpcoef(wpd_trees,[decomplevel,0]); % 0-8
+%                 dwt_feature_array2=wpcoef(wpd_trees,[decomplevel,1]); % 8-16
+%                 dwt_feature_array3=wpcoef(wpd_trees,[decomplevel,2]); % 16-24
+%                 dwt_feature_array4=wpcoef(wpd_trees,[decomplevel,3]); % 24-32
+%                 dwt_feature_array5=wpcoef(wpd_trees,[decomplevel,4]); % 32-40
+%                 dwt_feature_array6=wpcoef(wpd_trees,[decomplevel,5]); % 40-48
+                dwt_feature_array=[dwt_feature_array;dwt_feature_array1];
             end
             dwt_feature=reshape(dwt_feature_array',1,[]);
         end
 
         function psd_feature=calculate_PSD(inputEEG,fs)
             L=size(inputEEG,2);
-            psd_feature_array=zeros(size(inputEEG,1),L/2+1);
+            psd_feature_array=zeros(size(inputEEG,1),L/2);
             for chi=1:size(inputEEG,1)
                 fftsig=fft(inputEEG(chi,:));
                 psd=(1/(fs*L))*abs(fftsig).^2;
                 psd_onesided = psd(1:L/2+1);
                 psd_onesided(2:end-1)=2*psd_onesided(2:end-1);
-                psd_feature_array(chi,:)=psd_onesided;
+                psd_feature_array(chi,:)=psd_onesided(2:end);
             end
             psd_feature = reshape(psd_feature_array',1,[]);
         end
@@ -47,13 +56,13 @@ classdef Utility_Functions
             % inputEEG: Input EEG signal (size: numChannels x EEG samples)
             % spectEn: Output spectral entropy (size: 1 x numChannels)
             L=size(inputEEG,2);
-            PSD=zeros(size(inputEEG,1),L/2+1);
+            PSD=zeros(size(inputEEG,1),L/2);
             for chi=1:size(inputEEG,1)
                 fftsig=fft(inputEEG(chi,:));
                 psd=(1/(fs*L))*abs(fftsig).^2;
                 psd_onesided = psd(1:L/2+1);
                 psd_onesided(2:end-1)=2*psd_onesided(2:end-1);
-                PSD(chi,:)=psd_onesided;
+                PSD(chi,:)=psd_onesided(2:end);
             end
             % Ensure PSD values are positive to avoid log issues
             PSD(PSD == 0) = eps; % Replace zero values with machine epsilon
@@ -64,27 +73,8 @@ classdef Utility_Functions
             PWi = PSD./ totalPSD;
 
             % Compute Spectral Entropy
-            spectEn = -sum(PWi .* log(PWi), 2); % Sum across frequency dimension using natural log (ln)
-        end
-
-        function entropy = calculate_shannon_entropy(signal, n_bins)
-            % Set default number of bins if not specified
-            if nargin < 2
-                n_bins = Utility_Functions.calculate_sturges_rule(size(signal, 1));
-            end
-
-            % Calculate histogram of the signal
-            % histcounts returns the counts and edges of the bins
-            [counts, ~] = histcounts(signal, n_bins);
-
-            % Convert counts to probabilities by dividing by total number of samples
-            probabilities = counts / sum(counts);
-
-            % Remove zero probabilities to avoid log(0)
-            probabilities = probabilities(probabilities > 0);
-
-            % Calculate Shannon entropy: -sum(p * log2(p))
-            entropy = -sum(probabilities .* log2(probabilities));
+            spectEn = -sum(PWi .* log(PWi), 2)'; % Sum across frequency dimension using natural log (ln)
+        
         end
 
         function entropy_feature = calculate_Entropy(inputEEG, fs)
@@ -95,7 +85,8 @@ classdef Utility_Functions
                 % Filter to extract theta band
                 theta_band = filtfilt(b, a, inputEEG(chi, :));
 
-                % Use default number of bins if not specified
+                % Use default number of bins if not specified (Used Sturges
+                % rule)
                 n_bins = round(1 + log2(length(theta_band)));
                 % Histogram to estimate probabilities
                 [counts, ~] = histcounts(theta_band, n_bins);
@@ -114,11 +105,12 @@ classdef Utility_Functions
 
         function aar_feature=calculate_AAR(inputEEG)
             P=12;
+            aar_feature=[];
             num_channels=size(inputEEG, 1);
             for chi=1:num_channels
                 aar_feature_array=ar(inputEEG(chi,:),P,'ls');
-                aar_coeffs = aar_feature_array.A;
-                aar_feature = [aar_feature, aar_coeffs];
+                aar_coeffs = aar_feature_array.A(2:end);
+                aar_feature = [aar_feature, aar_coeffs,aar_feature_array.NoiseVariance];
             end
         end
 
