@@ -4,16 +4,18 @@ classdef Utility_Functions
     methods(Static)
 
 
-        function [BSF100_signal,BPF_signal] = preprocess_eeg(raw_eeg,fs)
+        function [BSF150_signal,BPF_signal] = preprocess_eeg(raw_eeg,fs)
             HPF_signal = zeros(size(raw_eeg));
             BSF50_signal = zeros(size(raw_eeg));
             BSF100_signal = zeros(size(raw_eeg));
+            BSF150_signal = zeros(size(raw_eeg));
             BPF_signal = zeros(size(raw_eeg));
             CAREEG = raw_eeg - mean(raw_eeg,2);
             for chi = 1:size(raw_eeg,2)
                 [HPF_signal(:,chi),~] = highpass(CAREEG(:,chi)',0.1,fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
                 [BSF50_signal(:,chi),~] = bandstop(HPF_signal(:,chi)',[49.9,50.1],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
-                [BSF100_signal(:,chi),~] = bandstop(HPF_signal(:,chi)',[99.9,100.1],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
+                [BSF100_signal(:,chi),~] = bandstop(BSF50_signal(:,chi)',[99.9,100.1],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
+                [BSF150_signal(:,chi),~] = bandstop(BSF100_signal(:,chi)',[149.9,150.1],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
                 [BPF_signal(:,chi),~] = bandpass(CAREEG(:,chi)',[1,10],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
             end
         end
@@ -26,12 +28,12 @@ classdef Utility_Functions
             for chi=1:size(inputEEG,1)
                 wpd_trees=wpdec(inputEEG(chi,:),decomplevel,waveletname);
                 dwt_feature_array1=wpcoef(wpd_trees,[decomplevel,0]); % 0-8
-%                 dwt_feature_array2=wpcoef(wpd_trees,[decomplevel,1]); % 8-16
-%                 dwt_feature_array3=wpcoef(wpd_trees,[decomplevel,2]); % 16-24
-%                 dwt_feature_array4=wpcoef(wpd_trees,[decomplevel,3]); % 24-32
-%                 dwt_feature_array5=wpcoef(wpd_trees,[decomplevel,4]); % 32-40
-%                 dwt_feature_array6=wpcoef(wpd_trees,[decomplevel,5]); % 40-48
-                dwt_feature_array=[dwt_feature_array;dwt_feature_array1];
+                dwt_feature_array2=wpcoef(wpd_trees,[decomplevel,1]); % 8-16
+                %                 dwt_feature_array3=wpcoef(wpd_trees,[decomplevel,2]); % 16-24
+                %                 dwt_feature_array4=wpcoef(wpd_trees,[decomplevel,3]); % 24-32
+                %                 dwt_feature_array5=wpcoef(wpd_trees,[decomplevel,4]); % 32-40
+                %                 dwt_feature_array6=wpcoef(wpd_trees,[decomplevel,5]); % 40-48
+                dwt_feature_array=[dwt_feature_array;dwt_feature_array1,dwt_feature_array2];
             end
             dwt_feature=reshape(dwt_feature_array',1,[]);
         end
@@ -74,7 +76,7 @@ classdef Utility_Functions
 
             % Compute Spectral Entropy
             spectEn = -sum(PWi .* log(PWi), 2)'; % Sum across frequency dimension using natural log (ln)
-        
+
         end
 
         function entropy_feature = calculate_Entropy(inputEEG, fs)
@@ -172,8 +174,65 @@ classdef Utility_Functions
         end
 
 
+        function [X_bal, Y_bal] = randomUndersample(trainingX, trainingY)
+            % undersample01  Randomly undersample majority class (0) to match minority (1)
+            %
+            %   [X_bal, Y_bal] = undersample01(trainingX, trainingY)
+            %
+            %   Inputs:
+            %     - trainingX : N×d feature matrix
+            %     - trainingY : N×1 label vector with values 0 or 1 (class 1 is minority)
+            %
+            %   Outputs:
+            %     - X_bal : M×d feature matrix after undersampling (M = 2·#(class 1))
+            %     - Y_bal : M×1 label vector after undersampling
+            %
+            %   This keeps all class 1 samples and randomly selects the same
+            %   number of class 0 samples (without replacement).
+
+            % Find indices of each class
+            idx0 = find(trainingY == 0);  % majority
+            idx1 = find(trainingY == 1);  % minority
+            n1   = numel(idx1);
+
+            % If no minority or already balanced, return unchanged
+            if n1 == 0 || numel(idx0) == n1
+                X_bal = trainingX;
+                Y_bal = trainingY;
+                return;
+            end
+            rng(42)
+            % Randomly pick n1 samples from class 0
+            keep0 = randsample(idx0, n1, false);
+
+            % Combine with all class 1 indices
+            finalIdx = [keep0; idx1];
+
+            % Extract balanced set and shuffle
+            X_bal = trainingX(finalIdx, :);
+            Y_bal = trainingY(finalIdx);
+
+            perm = randperm(size(X_bal, 1));
+            X_bal = X_bal(perm, :);
+            Y_bal = Y_bal(perm);
+        end
+
+
+
 
         function [accuracy, acc_class0, acc_class1, F1_class0, F1_class1] = binaryClassMetrics(predictions, trueLabels)
+
+            if nargin ==0
+                y_true = [ones(1,67),zeros(1,13),ones(1,33),zeros(1,12)];
+                y_pred = [ones(1,67),zeros(1,13),zeros(1,33),ones(1,12)];
+
+                fprintf('Running internal test for binaryClassMetrics…\n');
+                [acc, acc0, acc1, F10, F11] = Utility_Functions.binaryClassMetrics(y_pred, y_true);
+                disp([acc, acc0, acc1, F10, F11])
+                confusionmat(y_true,y_pred)
+                return;
+            end
+
             % Ensure column vectors
             predictions = predictions(:);
             trueLabels = trueLabels(:);

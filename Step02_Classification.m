@@ -61,13 +61,12 @@ for sessCombi = 1:length(combinations)
             test_labels = currentY(testIndices);  % Testing labels
 
             %% Handling Imabalance in the Class Distribution
-            [trainingInput_Min,trainingLabel_Min] = ADASYN(train_input,train_labels);
+%             [trainingInput_Min,trainingLabel_Min] = ADASYN(train_input,train_labels);
             %             [balancedTrainingInput,balancedTrainingLabels] = Utility_Functions.randomOversample(train_input,train_labels);
-            balancedTrainingInput = [train_input;trainingInput_Min];
-            balancedTrainingLabels = [train_labels;trainingLabel_Min];
+            [balancedTrainingInput,balancedTrainingLabels] = Utility_Functions.randomUndersample(train_input,train_labels);
             disp('Distribution of class 1/class 0:')
-            disp([' Before oversampling: ' num2str(sum(train_labels==1)) '/' num2str(sum(train_labels==0))])
-            disp([' After oversampling: ' num2str(sum(balancedTrainingLabels==1)) '/' num2str(sum(balancedTrainingLabels==0))])
+            disp([' Before undersampling: ' num2str(sum(train_labels==1)) '/' num2str(sum(train_labels==0))])
+            disp([' After undersampling: ' num2str(sum(balancedTrainingLabels==1)) '/' num2str(sum(balancedTrainingLabels==0))])
             %% Implementation of SVM
             optOPtionsLSVM = struct('AcquisitionFunctionName','expected-improvement-plus',...
                 'ShowPlots',0,...
@@ -146,7 +145,7 @@ for featurei = 1:length(featureNames)
     resultCell(lastRowIndex+featurei,8) = {[mean(AllSessionsLDA,1);std(AllSessionsLDA,0,1)]};
 end
 %% Add comments in the resultCell
-resultCell(end+1,2) = {'With CAR as the first step of preprocessing.'};
+resultCell(end+1,2) = {'LSVM results is for RBF SVM. Checking if RBF SVM improves performance or not'};
 %% Save Result Cell
 overallResultPath = fullfile(resultsPath,'overall');
 [~,~,~]=mkdir(overallResultPath);

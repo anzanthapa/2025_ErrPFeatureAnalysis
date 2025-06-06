@@ -147,8 +147,8 @@ end
 
 %% Load existing combinedFeatures . mat
 featurePath = fullfile(resultsPath,'features');
-if 0
-    combined_data = load(fullfile(featurePath,'combinedFeatures.mat')).combined_epochs;
+if 1
+    combined_data = load(fullfile(featurePath,'combinedFeatures.mat')).combined_data;
 end
 %% Extracting Features for Each Sample
 for triali = 2:size(combined_data,1)
