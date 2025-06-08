@@ -34,7 +34,7 @@ for sessCombi = 1:length(combinations)
     %% Start Training and Testing
     %% Features Loop
     featureNames = {'ErrP','Shannon Entropy','DWT','PSD','SpectEn'};
-    for featurei = 1:length(featureNames)
+    for featurei = 1:5
         resultCellCounter = resultCellCounter+1;
         disp(['<strong>Feature ' num2str(featurei) '/6 has started.</strong>'])
         currentX = cell2mat(combined_data(currentCombIndices,BPFColIndex+featurei));
@@ -61,11 +61,9 @@ for sessCombi = 1:length(combinations)
             test_labels = currentY(testIndices);  % Testing labels
 
             %% Handling Imabalance in the Class Distribution
-            [trainingInput_Min,trainingLabel_Min] = ADASYN(train_input,train_labels);
+%             [trainingInput_Min,trainingLabel_Min] = ADASYN(train_input,train_labels);
             %             [balancedTrainingInput,balancedTrainingLabels] = Utility_Functions.randomOversample(train_input,train_labels);
-            %             [balancedTrainingInput,balancedTrainingLabels] = Utility_Functions.randomUndersample(train_input,train_labels);
-            balancedTrainingInput = [train_input;trainingInput_Min];
-            balancedTrainingLabels = [train_labels;trainingLabel_Min];
+            [balancedTrainingInput,balancedTrainingLabels] = Utility_Functions.randomUndersample(train_input,train_labels);
             disp('Distribution of class 1/class 0:')
             disp([' Before undersampling: ' num2str(sum(train_labels==1)) '/' num2str(sum(train_labels==0))])
             disp([' After undersampling: ' num2str(sum(balancedTrainingLabels==1)) '/' num2str(sum(balancedTrainingLabels==0))])
@@ -132,7 +130,6 @@ for sessCombi = 1:length(combinations)
 end
 
 %% Taking Averages for All 12 Sessions
-featureNames = {'ErrP','Shannon Entropy','DWT','PSD','SpectEn'};
 lastRowIndex = length(resultCell);
 for featurei = 1:length(featureNames)
     featureCombIndices = 1+featurei:length(featureNames):lastRowIndex;
@@ -142,17 +139,6 @@ for featurei = 1:length(featureNames)
         error('Not the same combinations')
     end
     resultCell(lastRowIndex+featurei,2:3) = {'Average',resultCell(1+featurei,3)};
-    currentbAccLSVM=cell2mat(cellfun(@(A) mean(A(1:5,2:3),2), resultCell(featureCombIndices,5),'UniformOutput',false));
-    currentbAccReshaped = mean(reshape(currentbAccLSVM,5,[])',2);
-    [stdBAccLSVM,meanBAccLSVM] = std(currentbAccReshaped,0,1);
-    resultCell(lastRowIndex+featurei,10)={[meanBAccLSVM;stdBAccLSVM]};
-
-    currentbAccLDA=cell2mat(cellfun(@(A) mean(A(1:5,2:3),2), resultCell(featureCombIndices,8),'UniformOutput',false));
-    currentbAccReshaped = mean(reshape(currentbAccLDA,5,[])',2);
-    [stdBAccLDA,meanBAccLDA] = std(currentbAccReshaped,0,1);
-    resultCell(lastRowIndex+featurei,11)={[meanBAccLDA;stdBAccLDA]};
-
-
     AllSessionsLSVM= cell2mat(cellfun(@(A) A(6,:), resultCell(featureCombIndices,5),'UniformOutput',false));
     resultCell(lastRowIndex+featurei,5) = {[mean(AllSessionsLSVM,1);std(AllSessionsLSVM,0,1)]};
     AllSessionsLDA= cell2mat(cellfun(@(A) A(6,:), resultCell(featureCombIndices,8),'UniformOutput',false));

@@ -4,18 +4,14 @@ classdef Utility_Functions
     methods(Static)
 
 
-        function [BSF150_signal,BPF_signal] = preprocess_eeg(raw_eeg,fs)
+        function [BSF50_signal,BPF_signal] = preprocess_eeg(raw_eeg,fs)
             HPF_signal = zeros(size(raw_eeg));
             BSF50_signal = zeros(size(raw_eeg));
-            BSF100_signal = zeros(size(raw_eeg));
-            BSF150_signal = zeros(size(raw_eeg));
             BPF_signal = zeros(size(raw_eeg));
             CAREEG = raw_eeg - mean(raw_eeg,2);
             for chi = 1:size(raw_eeg,2)
                 [HPF_signal(:,chi),~] = highpass(CAREEG(:,chi)',0.1,fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
                 [BSF50_signal(:,chi),~] = bandstop(HPF_signal(:,chi)',[49.9,50.1],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
-                [BSF100_signal(:,chi),~] = bandstop(BSF50_signal(:,chi)',[99.9,100.1],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
-                [BSF150_signal(:,chi),~] = bandstop(BSF100_signal(:,chi)',[149.9,150.1],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
                 [BPF_signal(:,chi),~] = bandpass(CAREEG(:,chi)',[1,10],fs,"ImpulseResponse","iir",'StopbandAttenuation',60);
             end
         end
@@ -79,19 +75,19 @@ classdef Utility_Functions
 
         end
 
-        function entropy_feature = calculate_Entropy(inputEEG, fs)
-            [b, a] = butter(4, [4 8]./(fs/2), 'bandpass');  % Design filter once
+        function entropy_feature = calculate_Entropy(inputEEG)
+%             [b, a] = butter(4, [4 8]./(fs/2), 'bandpass');  % Design filter once
             num_channels = size(inputEEG, 1);
             entropy_feature_array = zeros(1,num_channels);  % Preallocate
             for chi = 1:num_channels
                 % Filter to extract theta band
-                theta_band = filtfilt(b, a, inputEEG(chi, :));
-
+%                 theta_band = filtfilt(b, a, inputEEG(chi, :));
+                currentChannelEEG = inputEEG(chi,:);
                 % Use default number of bins if not specified (Used Sturges
                 % rule)
-                n_bins = round(1 + log2(length(theta_band)));
+                n_bins = round(1 + log2(length(currentChannelEEG)));
                 % Histogram to estimate probabilities
-                [counts, ~] = histcounts(theta_band, n_bins);
+                [counts, ~] = histcounts(currentChannelEEG, n_bins);
                 probabilities = counts./ sum(counts);
 
                 % Remove zero entries
@@ -154,7 +150,7 @@ classdef Utility_Functions
 
             % Number of additional class-1 samples needed
             delta = n0 - n1;  % positive since n0 > n1
-
+            rng(42)
             % Randomly sample (with replacement) from minority indices
             rnd_idx1 = randsample(idx1, delta, true);
 

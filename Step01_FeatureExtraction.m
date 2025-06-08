@@ -9,7 +9,7 @@ data_filenames = {dir(fullfile(data_path, '*.mat')).name};
 window_start = 0; % in seconds relative to the event onset
 window_size = 0.5; % in seconds
 fs = 512;
-selected_channels = {'C1', 'C2', 'Cz', 'CP1', 'CP2', 'CPz', 'FC1', 'FC2', 'FCz'}; % Now accepts a cell array of channel names
+selected_channels = {'FC1','C1','CPz','FC2','FCz','Cz','C2',}; % Now accepts a cell array of channel names
 % selected_channels = {'Fp1', 'AF7', 'AF3', 'F1', 'F3', 'F5', 'F7', 'FT7', 'FC5', 'FC3', ...
 %                  'FC1', 'C1', 'C3', 'C5', 'T7', 'TP7', 'CP5', 'CP3', 'CP1', 'P1', ...
 %                  'P3', 'P5', 'P7', 'P9', 'PO7', 'PO3', 'O1', 'Iz', 'Oz', 'POz', ...
@@ -45,7 +45,6 @@ for filei=1:length(data_filenames)
         if length(selected_channel_indexes)~=length(selected_channels)
             error('Channel selection is not correct');
         end
-
         %% Extracting Class 1: Error Events
         type6_indices = current_data{1,runi}.header.EVENT.TYP==6;
         type9_indices = current_data{1,runi}.header.EVENT.TYP==9;
@@ -113,7 +112,7 @@ for subi = 1:length(subjectNums)
             xlabel('Time relative to the event onset [s]');
             ylabel('Amplitude [\muV]');ylim([-20,20]);
             title(['Channel Name:' selected_channels{chi}])
-            fileName = ['Fig_ErrPCorrect_CAR_BSF_Sub' num2str(subi) '_Session' num2str(sessi) '_' selected_channels{chi}];
+            fileName = ['Fig_ErrPCorrect_CAR_HPF_BSF_Sub' num2str(subi) '_Session' num2str(sessi) '_' selected_channels{chi}];
             saveas(gcf, fullfile(ErrPFolder, [fileName '.fig']));
             print(gcf, fullfile(ErrPFolder, [fileName '.tif']), '-dtiff', '-r300');
 
@@ -147,7 +146,7 @@ end
 
 %% Load existing combinedFeatures . mat
 featurePath = fullfile(resultsPath,'features');
-if 1
+if 0
     combined_data = load(fullfile(featurePath,'combinedFeatures.mat')).combined_data;
 end
 %% Extracting Features for Each Sample
@@ -155,13 +154,13 @@ for triali = 2:size(combined_data,1)
     currentTrialEEGHPF = combined_data{triali,HPFColIndex};
     currentTrialEEGBPF = combined_data{triali,BPFColIndex};
     currentERPFeature = reshape(currentTrialEEGBPF',1,[]);
-    current_entropy_feature=Utility_Functions.calculate_Entropy(currentTrialEEGHPF,fs);
+    current_entropy_feature=Utility_Functions.calculate_Entropy(currentTrialEEGHPF);
     current_dwt_feature=Utility_Functions.calculate_DWT(currentTrialEEGHPF);
     current_PSD_feature=Utility_Functions.calculate_PSD(currentTrialEEGHPF,fs);
     current_SpectEn_feature=Utility_Functions.func_compute_SpectEn(currentTrialEEGHPF,fs);
-    current_AAR_feature=Utility_Functions.calculate_AAR(currentTrialEEGHPF);
+%     current_AAR_feature=Utility_Functions.calculate_AAR(currentTrialEEGHPF);
     % Assign all features in one line
-    [combined_data{triali,BPFColIndex+1:BPFColIndex+6}] = deal(currentERPFeature, current_entropy_feature, current_dwt_feature,current_PSD_feature,current_SpectEn_feature, current_AAR_feature);
+    [combined_data{triali,BPFColIndex+1:BPFColIndex+5}] = deal(currentERPFeature, current_entropy_feature, current_dwt_feature,current_PSD_feature,current_SpectEn_feature);
     disp(['Trial ' num2str(triali-1) '/' num2str(size(combined_data,1)-1) ' is completed.'])
 end
 
