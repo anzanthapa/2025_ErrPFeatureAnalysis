@@ -9,7 +9,7 @@ data_filenames = {dir(fullfile(data_path, '*.mat')).name};
 window_start = 0; % in seconds relative to the event onset
 window_size = 0.5; % in seconds
 fs = 512;
-selected_channels = {'FC1','C1','CP1','CPz','FC2','FCz','Cz','C2','CP2'}; % Now accepts a cell array of channel names
+selected_channels = {'FC1','C1','CPz','FC2','FCz','Cz','C2',}; % Now accepts a cell array of channel names
 % selected_channels = {'Fp1', 'AF7', 'AF3', 'F1', 'F3', 'F5', 'F7', 'FT7', 'FC5', 'FC3', ...
 %                  'FC1', 'C1', 'C3', 'C5', 'T7', 'TP7', 'CP5', 'CP3', 'CP1', 'P1', ...
 %                  'P3', 'P5', 'P7', 'P9', 'PO7', 'PO3', 'O1', 'Iz', 'Oz', 'POz', ...
@@ -21,13 +21,13 @@ selected_channels = {'FC1','C1','CP1','CPz','FC2','FCz','Cz','C2','CP2'}; % Now 
 %% Epoch Extraction
 % Create cell array to combine all relevant data. Useful for doing both subject wise or session wise classification
 % Column 1: Subject; Column 2: Session; Column 3: Class Label; Column 4: Preprocessed EEG Data; Column 5: BPF EEG Data;  
-combined_data = cell(1,10);
+combined_data = cell(1,11);
 subColIndex = 1;
 sessColIndex = 2;
 classColIndex = 3;
 HPFColIndex = 4;
 BPFColIndex = 5;
-combined_data(1,:) = {'Subject','Session','Class','HPF EEG','BPF EEG','bTS','PSD','DWT','ShEn','SpectEn'};
+combined_data(1,:) = {'Subject','Session','Class','HPF EEG','BPF EEG','DWT1','DWT2','DWT3','DWT4','DWT5','DWT6','DWT7','DWT8','DWT9'};
 %% Files Loop
 sample_counter = 1;
 for filei=1:length(data_filenames) 
@@ -57,6 +57,7 @@ for filei=1:length(data_filenames)
             combined_data{sample_counter,classColIndex} = 1;
             combined_data{sample_counter,HPFColIndex} = current_run_HPF_eeg(start_sample:end_sample,selected_channel_indexes)';
             combined_data{sample_counter,BPFColIndex} = current_run_BPF_eeg(start_sample:end_sample,selected_channel_indexes)';
+
         end
 
         %% Extracting Class 0: Correct Events
@@ -141,24 +142,23 @@ for subi = 1:length(subjectNums)
         disp(['Figure is saved for Subject ' num2str(subi) ' Session ' num2str(sessi) '.'])
     end
 end
+
+%% Load existing combinedFeatures . mat
+featurePath = fullfile(resultsPath,'features');
+if 0
+    combined_data = load(fullfile(featurePath,'combinedFeatures.mat')).combined_data;
+end
 %% Extracting Features for Each Sample
 for triali = 2:size(combined_data,1)
-    currentTrialEEGBPF = combined_data{triali,BPFColIndex};
-    currentbTSFeature = reshape(currentTrialEEGBPF',1,[]);
     currentTrialEEGHPF = combined_data{triali,HPFColIndex};
-    %     current_entropy_feature=Utility_Functions.calculate_Entropy(currentTrialEEGHPF,fs);
-    %     current_dwt_feature=Utility_Functions.calculate_DWT(currentTrialEEGHPF);
-    current_PSD_feature=Utility_Functions.calculate_PSD_DTA(currentTrialEEGHPF,fs);
-    %     current_SpectEn_feature=Utility_Functions.func_compute_SpectEn(currentTrialEEGHPF,fs);
+    [dwt1,dwt2,dwt3,dwt4,dwt5,dwt6,dwt7,dwt8,dwt9]=Utility_Functions.calculate_DWT_cases(currentTrialEEGHPF);
     % Assign all features in one line
-    %     [combined_data{triali,BPFColIndex+1:BPFColIndex+5}] = deal(currentbTSFeature,current_PSD_feature,current_dwt_feature, current_entropy_feature,current_SpectEn_feature);
-    combined_data{triali,7} = current_PSD_feature;
+    [combined_data{triali,BPFColIndex+1:BPFColIndex+9}] = deal(dwt1,dwt2,dwt3,dwt4,dwt5,dwt6,dwt7,dwt8,dwt9);
     disp(['Trial ' num2str(triali-1) '/' num2str(size(combined_data,1)-1) ' is completed.'])
 end
 
 %% Saving the Combined File with features
-featurePath = fullfile(resultsPath,'features');
-fileName = 'combinedFeaturesDTA.mat';
+fileName = 'combinedFeaturesDWT.mat';
 [~,~,~]=mkdir(featurePath);
 save(fullfile(featurePath,fileName),"combined_data");
 disp('<strong>Features are saved.</strong>')

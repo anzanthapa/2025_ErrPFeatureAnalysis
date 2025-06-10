@@ -2,7 +2,7 @@ clc;
 clear; close all;
 %% Load Feature Matrix
 featurePath = 'C:\Users\brth229\OneDrive - University of Kentucky\Research Projects\ErRP\results\features';
-combined_data = load(fullfile(featurePath,'combinedFeatures.mat')).combined_data;
+combined_data = load(fullfile(featurePath,'combinedFeaturesDTA.mat')).combined_data;
 disp('Features are extracted succeffully.')
 resultsPath = 'C:\Users\brth229\OneDrive - University of Kentucky\Research Projects\ErRP\results';
 %% Columns for Features and Sessions
@@ -34,7 +34,7 @@ for sessCombi = 1:length(combinations)
     %% Start Training and Testing
     %% Features Loop
     featureNames = {'bTS','PSD','DWT','ShEn','SpectEn'};
-    for featurei = 1:length(featureNames)
+    for featurei = 2
         resultCellCounter = resultCellCounter+1;
         disp(['<strong>Feature ' num2str(featurei) '/' num2str(length(featureNames)) ': ' featureNames{featurei} ' has started.</strong>'])
         currentX = cell2mat(combined_data(currentCombIndices,BPFColIndex+featurei));
@@ -201,7 +201,7 @@ overallResultPath = fullfile(resultsPath,'overall');
 [~,~,~]=mkdir(overallResultPath);
 dateAndTime = datetime('now');
 currentDate = char(datetime("today"));
-resultCellFileName = ['resultCell_' char(datetime("today")) '_' num2str(hour(dateAndTime)) num2str(minute(dateAndTime)) '_Table1.mat'];
+resultCellFileName = ['resultCell_PSDDTA_' char(datetime("today")) '_' num2str(hour(dateAndTime)) num2str(minute(dateAndTime)) '_Table1.mat'];
 save(fullfile(overallResultPath,resultCellFileName),"resultCell")
 disp('<strong>Results are saved.</strong>')
 %% END OF SCRIPT

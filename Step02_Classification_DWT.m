@@ -2,7 +2,7 @@ clc;
 clear; close all;
 %% Load Feature Matrix
 featurePath = 'C:\Users\brth229\OneDrive - University of Kentucky\Research Projects\ErRP\results\features';
-combined_data = load(fullfile(featurePath,'combinedFeatures.mat')).combined_data;
+combined_data = load(fullfile(featurePath,'combinedFeaturesDWT.mat')).combined_data;
 disp('Features are extracted succeffully.')
 resultsPath = 'C:\Users\brth229\OneDrive - University of Kentucky\Research Projects\ErRP\results';
 %% Columns for Features and Sessions
@@ -33,7 +33,7 @@ for sessCombi = 1:length(combinations)
     disp(['Class Distribution (Class 1/Class 0): ' num2str(sum(currentY==1)) '/' num2str(sum(currentY==0))])
     %% Start Training and Testing
     %% Features Loop
-    featureNames = {'bTS','PSD','DWT','ShEn','SpectEn'};
+    featureNames = {'DWT1','DWT2','DWT3','DWT4','DWT5','DWT6','DWT7','DWT8','DWT9'};
     for featurei = 1:length(featureNames)
         resultCellCounter = resultCellCounter+1;
         disp(['<strong>Feature ' num2str(featurei) '/' num2str(length(featureNames)) ': ' featureNames{featurei} ' has started.</strong>'])
@@ -61,11 +61,11 @@ for sessCombi = 1:length(combinations)
             test_labels = currentY(testIndices);  % Testing labels
 
             %% Handling Imabalance in the Class Distribution
-            [trainingInput_Min,trainingLabel_Min] = ADASYN(train_input,train_labels);
+            %             [trainingInput_Min,trainingLabel_Min] = ADASYN(train_input,train_labels);
             %             [balancedTrainingInput,balancedTrainingLabels] = Utility_Functions.randomOversample(train_input,train_labels);
-            %             [balancedTrainingInput,balancedTrainingLabels] = Utility_Functions.randomUndersample(train_input,train_labels);
-            balancedTrainingInput = [train_input;trainingInput_Min];
-            balancedTrainingLabels = [train_labels;trainingLabel_Min];
+            [balancedTrainingInput,balancedTrainingLabels] = Utility_Functions.randomUndersample(train_input,train_labels);
+            %             balancedTrainingInput = [train_input;trainingInput_Min];
+            %             balancedTrainingLabels = [train_labels;trainingLabel_Min];
             disp('Distribution of class 1/class 0:')
             disp([' Before undersampling: ' num2str(sum(train_labels==1)) '/' num2str(sum(train_labels==0))])
             disp([' After undersampling: ' num2str(sum(balancedTrainingLabels==1)) '/' num2str(sum(balancedTrainingLabels==0))])
@@ -166,12 +166,12 @@ resultCell(end+1,2) = {'LSVM results is for RBF SVM. Checking if RBF SVM improve
 
 %% Statistical Evaluation
 %Feature Vs Feature for BACC
-bTSLSVM = resultCell{62,11}(:,1); 
-PSDLSVM = resultCell{63,11}(:,1);
+ErrPLSVM = resultCell{62,11}(:,1); 
+ShEnLSVM = resultCell{63,11}(:,1);
 DWTLSVM = resultCell{64,11}(:,1);
-ShEnLSVM = resultCell{65,11}(:,1);
+PSDLSVM = resultCell{65,11}(:,1);
 SpectEnLSVM = resultCell{66,11}(:,1);
-[~,p12]=ttest(bTSLSVM,ShEnLSVM);[~,p13]=ttest(bTSLSVM,DWTLSVM);[~,p14]=ttest(bTSLSVM,PSDLSVM);[~,p15]=ttest(bTSLSVM,SpectEnLSVM);
+[~,p12]=ttest(ErrPLSVM,ShEnLSVM);[~,p13]=ttest(ErrPLSVM,DWTLSVM);[~,p14]=ttest(ErrPLSVM,PSDLSVM);[~,p15]=ttest(ErrPLSVM,SpectEnLSVM);
 [~,p23]=ttest(ShEnLSVM,DWTLSVM);[~,p24]=ttest(ShEnLSVM,PSDLSVM);[~,p25]=ttest(ShEnLSVM,SpectEnLSVM);
 [~,p34]=ttest(DWTLSVM,PSDLSVM);[~,p35]=ttest(DWTLSVM,SpectEnLSVM);
 [~,p45]=ttest(PSDLSVM,SpectEnLSVM);
@@ -181,12 +181,12 @@ FFLSVM = [nan,p12,p13,p14,p15
     p14,p24,p34,nan,p45
     p15,p25,p35,p45,nan];
 
-bTSPLDA = resultCell{62,12}(:,1); 
-PSDLDA = resultCell{63,12}(:,1);
+ErrPLDA = resultCell{62,12}(:,1); 
+ShEnLDA = resultCell{63,12}(:,1);
 DWTLDA = resultCell{64,12}(:,1);
-ShEnLDA = resultCell{65,12}(:,1);
+PSDLDA = resultCell{65,12}(:,1);
 SpectEnLDA = resultCell{66,12}(:,1);
-[~,p12]=ttest(bTSPLDA,ShEnLDA);[~,p13]=ttest(bTSPLDA,DWTLDA);[~,p14]=ttest(bTSPLDA,PSDLDA);[~,p15]=ttest(bTSPLDA,SpectEnLDA);
+[~,p12]=ttest(ErrPLDA,ShEnLDA);[~,p13]=ttest(ErrPLDA,DWTLDA);[~,p14]=ttest(ErrPLDA,PSDLDA);[~,p15]=ttest(ErrPLDA,SpectEnLDA);
 [~,p23]=ttest(ShEnLDA,DWTLDA);[~,p24]=ttest(ShEnLDA,PSDLDA);[~,p25]=ttest(ShEnLDA,SpectEnLDA);
 [~,p34]=ttest(DWTLDA,PSDLDA);[~,p35]=ttest(DWTLDA,SpectEnLDA);
 [~,p45]=ttest(PSDLDA,SpectEnLDA);
@@ -201,7 +201,7 @@ overallResultPath = fullfile(resultsPath,'overall');
 [~,~,~]=mkdir(overallResultPath);
 dateAndTime = datetime('now');
 currentDate = char(datetime("today"));
-resultCellFileName = ['resultCell_' char(datetime("today")) '_' num2str(hour(dateAndTime)) num2str(minute(dateAndTime)) '_Table1.mat'];
+resultCellFileName = ['resultCell_DWT_' char(datetime("today")) '_' num2str(hour(dateAndTime)) num2str(minute(dateAndTime)) '.mat'];
 save(fullfile(overallResultPath,resultCellFileName),"resultCell")
 disp('<strong>Results are saved.</strong>')
 %% END OF SCRIPT
